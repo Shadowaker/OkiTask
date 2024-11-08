@@ -2,7 +2,7 @@ import json
 
 from errors import ParseError
 
-class Parser:
+class ConfigParser:
     """Basic config parser"""
 
     def __init__(self, path):
@@ -30,9 +30,8 @@ class Parser:
     def __iter__(self):
         return iter(self.__aslist__())
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         return {x: getattr(self, x) for x in dir(self)}
 
-    def validate(self):
-        return True
+
 

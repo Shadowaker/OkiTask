@@ -1,11 +1,12 @@
 {
-    "tasks": {
-        "task_name": {                      # REQUIRED The name that will be assigned in the task manager cli
+    "tasks": [
+        {
+            "name": "task_name"             # REQUIRED The name that will be assigned in the task manager cli
             "cmd": "say DAJE ROMA",         # REQUIRED The name of the command to launch
             "amount": 10,                   # REQUIRED How many process you want to spawn
             "auto_start": true,             # OPTIONAL The process will run on start, default true
-            "auto_restart": "never",        # OPTIONAL Restart the task on "never", "always", or on "unexpected", default "never"
-            "expected_output":              # OPTIONAL Which return codes represent an "expected" exit status, default []
+            "auto_restart": "never",        # OPTIONAL Restart the task on "never", "always", or "unexpected", default "never"
+            "expected_outputs":              # OPTIONAL Which return codes represent an "expected" exit status, default []
                 [
                     "OK",
                     "example_code"
@@ -17,10 +18,11 @@
             "stdout": ""                    # OPTIONAL Redirect stdout to file (path) or discard it (""), default ""
             "stderr": ""                    # OPTIONAL Redirect stdout to file (path) or discard it (""), default ""
             "env":                          # OPTIONAL Environment variables to set before launching the program, default []
-                [
-                ],
-            "dir": "./"                     # OPTIONAL A working directory to set before launching the program, default "./"
-            umask: 0666                     # OPTIONAL An umask to set before launching the program, default 0666 (touch default permission -rw-rw-rw)
-        }
+                {
+                },
+            "dir": "."                      # OPTIONAL A working directory to set before launching the program, default "."
+            umask: "0666"                     # OPTIONAL An umask to set before launching the program, default 0666 (touch default permission -rw-rw-rw)
+        },
+        ...
     }
 }
