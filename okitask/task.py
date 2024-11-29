@@ -1,14 +1,32 @@
 import signal
 import os
 
+from subprocess import Popen
+
 from errors import TaskInitError
 
-STATES = {
+STATUS = {
     0: "STOPPED",
     1: "STARTED",
     2: "ACTIVE",
     3: "KILLED"
 }
+
+
+class Process:
+
+    def __init__(self, _id: int, name: str, process: Popen):
+
+        self.id = _id
+        self.name = name
+        self.process = process
+        self.status = 0
+
+    def __str__(self):
+        return f"({self.process.pid}) {self.name}_{self.id} | {STATUS[self.status]}"
+
+    def change_status(self, status: int):
+        self.status = status
 
 
 class Task:
@@ -17,12 +35,12 @@ class Task:
     def __init__(self, name, **kwargs):
 
         self.name = name
-        self.state = 0
+        self.status = 0
         self.exit_code = None
-        self.pids = []
+        self.processes: [Process] = []
 
         try:
-            self.cmd, self.amount = kwargs["cmd"], kwargs["amount"]
+            self.cmd, self.args, self.amount = kwargs["cmd"], kwargs["args"], kwargs["amount"]
             self.auto_start = kwargs.get("auto_start", True)
             self.auto_restart = kwargs.get("auto_restart", "never"),
             self.expected_output = kwargs.get("expected_outputs", [])
@@ -81,7 +99,18 @@ class Task:
             os.putenv(str(x), self.env[x])
 
     def __str__(self):
-        return f"{self.name}\t|\t{STATES[self.state]}\t"
+        return f"{self.name}\t|\t{STATUS[self.status]}\t"
+
+    def command_list(self):
+        return [self.cmd] + self.args
+
+    def add_process(self, proc: Process):
+        self.processes.append(proc)
+
+    def set_status(self, status: int):
+        self.status = status
+
+
 
 
 

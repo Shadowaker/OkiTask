@@ -24,6 +24,9 @@ class ConfigParser:
             setattr(self, k, v)
             self.attrs.append(k)
 
+        if "tasks" not in self.attrs:
+            raise ParseError(f"Invalid config file: 'tasks' field not found.")
+
     def __aslist__(self):
         return [x for x in dir(self)]
 
