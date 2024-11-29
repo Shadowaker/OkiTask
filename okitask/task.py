@@ -3,12 +3,12 @@ import os
 
 from errors import TaskInitError
 
-STATES = [
-    "STOPPED",
-    "STARTED",
-    "ACTIVE",
-    "KILLED"
-]
+STATES = {
+    0: "STOPPED",
+    1: "STARTED",
+    2: "ACTIVE",
+    3: "KILLED"
+}
 
 
 class Task:
@@ -17,7 +17,7 @@ class Task:
     def __init__(self, name, **kwargs):
 
         self.name = name
-        self.state = "STOPPED"
+        self.state = 0
         self.exit_code = None
         self.pids = []
 
@@ -79,6 +79,9 @@ class Task:
 
         for x in self.env:
             os.putenv(str(x), self.env[x])
+
+    def __str__(self):
+        return f"{self.name}\t|\t{STATES[self.state]}\t"
 
 
 
