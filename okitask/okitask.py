@@ -7,6 +7,8 @@ import task as ts
 
 COMMANDS = []
 
+# todo pass print to logging module
+
 def start_task(task: ts.Task):
     """Start a task processes."""
 
@@ -36,6 +38,13 @@ def stop_task(task: ts.Task):
             proc.change_status(0)
         except Exception as e:
             print(f"{cl.BRIGHT_RED}Error: Process {proc} failed to stop.\nReason: {e}")
+
+
+def restart_task(task: ts.Task):
+    """Restart a task processes."""
+    task.set_status(0)
+    stop_task(task)
+    start_task(task)
 
 
 def status():
