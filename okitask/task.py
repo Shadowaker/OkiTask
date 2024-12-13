@@ -40,16 +40,16 @@ class Task:
         self.processes: [Process] = []
 
         try:
-            self.cmd, self.args, self.amount = kwargs["cmd"], kwargs["args"], kwargs["amount"]
+            self.cmd, self.amount = kwargs["cmd"], kwargs["amount"]
             self.auto_start = kwargs.get("auto_start", True)
-            self.auto_restart = kwargs.get("auto_restart", "never"),
+            self.auto_restart = kwargs.get("auto_restart", "never")
             self.expected_output = kwargs.get("expected_outputs", [])
             self.time_start, self.max_retries = kwargs.get("time_start", 1), kwargs.get("max_retries", 1)
-            self.kill_signal, self.time_stop = kwargs.get("signal", "SIGNAL"), kwargs.get("time_stop", 1)
+            self.kill_signal, self.time_stop = kwargs.get("kill_signal", "SIGKILL"), kwargs.get("time_stop", 1)
             self.stdout, self.stderr, = kwargs.get("stduot", ""), kwargs.get("stderr", "")
             self.env = kwargs.get("env", [])
             self.dir, self.umask = kwargs.get("dir", "."), kwargs.get("umask", "0666")
-        except KeyError:
+        except KeyError as e:
             raise TaskInitError("Can't init task object")
 
         d = {
@@ -71,7 +71,8 @@ class Task:
                 continue
 
         try:
-            self.kill_signal = getattr(signal, self.kill_signal)
+
+            self.kill_signal = getattr(signal.Signals, self.kill_signal)
         except AttributeError:
             raise TaskInitError(f"Kill signal needs to be a valid signal, not {self.kill_signal}")
 
@@ -102,7 +103,7 @@ class Task:
         return f"{self.name}\t|\t{STATUS[self.status]}\t"
 
     def command_list(self):
-        return [self.cmd] + self.args
+        return [self.cmd]
 
     def add_process(self, proc: Process):
         self.processes.append(proc)

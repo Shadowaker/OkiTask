@@ -51,22 +51,42 @@ def status():
     pass
 
 
+def startup(tasks: list):
+    print(f"{cl.GREEN}Autostarting processes...{cl.BLANK}")
+
+    for task in tasks:
+        if task.auto_start:
+            start_task(task)
+
+    print(f"{cl.GREEN}Done.{cl.BLANK}")
+
+
 def main(argv: list):
 
     try:
-        conf = parser.ConfigParser(argv[0])
+        conf = parser.ConfigParser(argv[1])
     except parser.ParseError as e:
         print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
+        return
+    except IndexError:
+        print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} File not found")
         return
 
     tasks = []
     for x in conf.tasks:
         try:
-            tasks.append(ts.Task(x["name"], **x))
+            tasks.append(ts.Task(str(x), **conf.tasks[x]))
         except ts.TaskInitError as e:
             print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
             return
 
-    print(f"{cl.GREEN}Starting processes...{cl.BLANK}")
+    startup(tasks)
 
-main(*sys.argv)
+
+if "__main__" == __name__:
+
+    try:
+        main(sys.argv)
+    except KeyboardInterrupt:
+        exit(0)
+
