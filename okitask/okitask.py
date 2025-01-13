@@ -4,6 +4,7 @@ import subprocess
 import utility.colors as cl
 import parser
 import task as ts
+from errors import TaskStopError
 
 COMMANDS = []
 
@@ -38,12 +39,18 @@ def stop_task(task: ts.Task):
             proc.change_status(0)
         except Exception as e:
             print(f"{cl.BRIGHT_RED}Error: Process {proc} failed to stop.\nReason: {e}")
+            raise TaskStopError(f"Can't stop task: {e}")
+    task.set_status(0)
 
 
 def restart_task(task: ts.Task):
     """Restart a task processes."""
-    task.set_status(0)
-    stop_task(task)
+    try:
+        stop_task(task)
+    except TaskStopError:
+        # TODO Here think about task recovery
+        # A task cannot be stopped only because the main process doesn't have enough privilege
+        return
     start_task(task)
 
 

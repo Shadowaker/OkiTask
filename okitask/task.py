@@ -137,7 +137,6 @@ class Task:
                 continue
 
         try:
-
             self.kill_signal = getattr(signal.Signals, self.kill_signal)
         except AttributeError:
             raise TaskInitError(f"Kill signal needs to be a valid signal, not {self.kill_signal}")
