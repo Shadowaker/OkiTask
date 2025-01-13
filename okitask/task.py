@@ -89,7 +89,6 @@ class TaskDescription:
             raise TaskInitError(f"The passed umask ({self.umask}) is not an octal")
         try:
             os.umask(self.umask)
-            # TODO: Change validation here, we're changing the process umask not checking if that's a valid one
         except OSError:
             raise TaskInitError(f"The passed umask ({self.umask}) is not valid")
 
