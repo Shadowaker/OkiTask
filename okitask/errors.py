@@ -16,3 +16,7 @@ class TaskStopError(OkiTaskError):
 
 class TaskStartError(OkiTaskError):
     """Task can't be started"""
+
+
+class SetTypeError(OkiTaskError):
+    """Type passed is not allowed"""
