@@ -1,14 +1,14 @@
 import sys
 import subprocess
+import logging
 
 import utility.colors as cl
+from utility import logging_config
 import parser
 import task as ts
 from errors import TaskStopError
 
 COMMANDS = []
-
-# todo pass print to logging module
 
 def start_task(task: ts.Task):
     """Start a task processes."""
@@ -20,9 +20,9 @@ def start_task(task: ts.Task):
             proc = ts.Process(x, f"{task.name}", proc)
             task.add_process(proc)
             proc.change_status(1)
-            print(f"Started {proc}...")
+            logging.info(f"Started {proc}...")
         except Exception as e:
-            print(f"{cl.BRIGHT_RED}Error: Process {x} of task {task.name} failed.\nReason: {e}")
+            logging.error(f"{cl.BRIGHT_RED}Error: Process {x} of task {task.name} failed.\nReason: {e}")
             stop_task(task)
             task.set_status(3)
             return
@@ -38,7 +38,7 @@ def stop_task(task: ts.Task):
             proc.process.wait()
             proc.change_status(0)
         except Exception as e:
-            print(f"{cl.BRIGHT_RED}Error: Process {proc} failed to stop.\nReason: {e}")
+            logging.error(f"{cl.BRIGHT_RED}Error: Process {proc} failed to stop.\nReason: {e}")
             raise TaskStopError(f"Can't stop task: {e}")
     task.set_status(0)
 
@@ -49,7 +49,7 @@ def restart_task(task: ts.Task):
         stop_task(task)
     except TaskStopError:
         # TODO Here think about task recovery
-        # A task cannot be stopped only because the main process doesn't have enough privilege
+        # A task cannot be stopped only because the main process doesn't have enough privilege (NOT sure)
         return
     start_task(task)
 
@@ -59,19 +59,24 @@ def status():
 
 
 def startup(tasks: list):
-    print(f"{cl.GREEN}Autostarting processes...{cl.BLANK}")
+    logging.info(f"{cl.GREEN}Autostarting processes...{cl.BLANK}")
 
     for task in tasks:
         if task.auto_start:
             start_task(task)
 
-    print(f"{cl.GREEN}Done.{cl.BLANK}")
+    logging.info(f"{cl.GREEN}Done.{cl.BLANK}")
 
 
 def main(argv: list):
 
+    # getting configs
     try:
         conf = parser.ConfigParser(argv[1])
+        try:
+            log_conf = logging_config.LoggingConfig(**conf.log)
+        except NotImplementedError:
+            log_conf = logging_config.LoggingConfig(level="DEBUG")
     except parser.ParseError as e:
         print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
         return
@@ -79,12 +84,15 @@ def main(argv: list):
         print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} File not found")
         return
 
+    # setting up logging
+    logging.basicConfig(format='[%(levelname)s] %(message)s', level=log_conf.level)
+
     tasks = []
     for x in conf.tasks:
         try:
             tasks.append(ts.Task(str(x), **conf.tasks[x]))
         except ts.TaskInitError as e:
-            print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
+            logging.error(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
             return
 
     startup(tasks)

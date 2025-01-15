@@ -2,6 +2,7 @@ import json
 
 from errors import ParseError
 
+
 class ConfigParser:
     """Basic config parser"""
 

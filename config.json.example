@@ -24,5 +24,8 @@
             umask: "0666"                     # OPTIONAL An umask to set before launching the program, default 0666 (touch default permission -rw-rw-rw)
         },
         ...
+    },
+    "log": {
+        "level": "DEBUG",
     }
 }
