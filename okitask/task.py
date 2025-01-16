@@ -195,5 +195,6 @@ class Task:
                         new_proc = Process(proc.id, f"{self.name}", new_proc)
                         new_proc.set_retried(proc.retried + 1)
                         self.processes[i] = new_proc
+                        del proc
         logging.debug(f"[{self.name}] Ended restart loop.")
 
