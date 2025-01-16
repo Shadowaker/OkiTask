@@ -137,6 +137,10 @@ class Task:
                 logging.debug(f"Started {proc}.")
             except Exception as e:
                 logging.error(f"{cl.BRIGHT_RED}Error: Process {x} of task {self.name} failed.\nReason: {e}")
+                try:
+                    self.stop()
+                except TaskStopError:
+                    pass
                 return
 
         logging.info(f"{cl.GREEN}{self.name} started.{cl.BLANK}")
@@ -169,8 +173,27 @@ class Task:
         self.run()
 
     def check_process_running(self):
-        # building
+        logging.debug(f"[{self.name}] Starting check loop...")
+
         for proc in self.processes:
             if proc.process.poll() is None:
                 continue
             proc.change_status(EXITED)
+        logging.debug(f"[{self.name}] Ended check loop.")
+
+    def restart_failed_processes(self):
+
+        logging.debug(f"[{self.name}] Starting restart loop...")
+        for i, proc in enumerate(self.processes):
+            if proc.status == EXITED:
+                if proc.process.returncode < 0:
+                    if self.max_retries > proc.retried:
+                        new_proc = subprocess.Popen(
+                            self.command_list(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True
+                        )
+                        new_proc = Process(proc.id, f"{self.name}", new_proc)
+                        new_proc.set_retried(proc.retried + 1)
+                        self.processes[i] = new_proc
+        logging.debug(f"[{self.name}] Ended restart loop.")
+

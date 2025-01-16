@@ -13,8 +13,6 @@ import parser
 # task.py
 import task as ts
 
-# errors.py
-from errors import TaskStopError
 
 
 TITLE = """
@@ -27,10 +25,6 @@ TITLE = """
 """
 
 COMMANDS = []
-
-
-def status():
-    pass
 
 
 def startup(tasks: list[ts.Task]):
@@ -72,8 +66,13 @@ def main(argv: list):
 
     startup(tasks)
 
-    while 1:
-        break
+    try:
+        while 1:
+            for task in tasks:
+                task.check_process_running()
+                task.restart_failed_processes()
+    except KeyboardInterrupt:
+        return
 
 
 if "__main__" == __name__:
@@ -86,4 +85,5 @@ if "__main__" == __name__:
     print("\n", TITLE, "\n")
     print(f"{cl.GREEN} Welcome {username}!", {cl.BLANK})
     main(sys.argv)
+    print(f"{cl.BRIGHT_RED} Bye {username}!")
 
