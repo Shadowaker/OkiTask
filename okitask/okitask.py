@@ -16,12 +16,12 @@ import task as ts
 
 
 TITLE = """
- ██████╗ ██╗  ██╗██╗████████╗ █████╗ ███████╗██╗  ██╗\n
-██╔═══██╗██║ ██╔╝██║╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝\n
-██║   ██║█████╔╝ ██║   ██║   ███████║███████╗█████╔╝ \n
-██║   ██║██╔═██╗ ██║   ██║   ██╔══██║╚════██║██╔═██╗ \n
-╚██████╔╝██║  ██╗██║   ██║   ██║  ██║███████║██║  ██╗\n
- ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝\n
+ ██████╗ ██╗  ██╗██╗████████╗ █████╗ ███████╗██╗  ██╗
+██╔═══██╗██║ ██╔╝██║╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
+██║   ██║█████╔╝ ██║   ██║   ███████║███████╗█████╔╝
+██║   ██║██╔═██╗ ██║   ██║   ██╔══██║╚════██║██╔═██╗
+╚██████╔╝██║  ██╗██║   ██║   ██║  ██║███████║██║  ██╗
+ ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 """
 
 COMMANDS = []
@@ -50,7 +50,7 @@ def main(argv: list):
         print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
         return
     except IndexError:
-        print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} File not passed.")
+        print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} File not passed.{cl.BLANK}")
         print(f"{cl.BRIGHT_RED}File required. {cl.BLANK}")
         return
 
@@ -74,6 +74,7 @@ def main(argv: list):
                 task.check_process_running()
                 task.restart_failed_processes()
     except KeyboardInterrupt:
+        print("")
         logging.debug(f"Exiting main loop.")
         for task in tasks:
             task.stop()
@@ -85,10 +86,10 @@ if "__main__" == __name__:
     try:
         username = os.environ.get('USER', os.environ.get('USERNAME', "User"))
     except [AttributeError, ValueError, TypeError, OSError]:    # better safe than sorry
-        username = "User"
+        username = "Monkey"
 
-    print("\n", TITLE, "\n")
-    print(f"{cl.GREEN} Welcome {username}!", {cl.BLANK})
+    print("\n", TITLE,)
+    print(f"{cl.GREEN} Welcome {username}!{cl.BLANK}")
     main(sys.argv)
     print(f"{cl.BRIGHT_RED} Bye {username}!")
 

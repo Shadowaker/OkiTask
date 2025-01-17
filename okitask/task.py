@@ -117,7 +117,7 @@ class Task:
         return f"{self.name}\t|\t{STATUS[self.status]}\t"
 
     def command_list(self) -> list:
-        return [self.cmd]
+        return self.cmd.split(" ")
 
     def add_process(self, proc: Process):
         self.processes.append(proc)
