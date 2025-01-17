@@ -89,7 +89,7 @@ if "__main__" == __name__:
         username = "Monkey"
 
     print("\n", TITLE,)
-    print(f"{cl.GREEN} Welcome {username}!{cl.BLANK}")
+    print(f"{cl.GREEN}Welcome {username}!{cl.BLANK}")
     main(sys.argv)
-    print(f"{cl.BRIGHT_RED} Bye {username}!")
+    print(f"{cl.BRIGHT_RED}Bye {username}!")
 

@@ -51,7 +51,7 @@ class Task:
 
     def __init__(self, name, **kwargs):
         self.name = name
-        self.status = 0
+        self.status = "STOPPED"
         self.processes: list[Process] = []
 
         try:
@@ -114,7 +114,7 @@ class Task:
             os.putenv(str(x), self.env[x])
 
     def __str__(self):
-        return f"{self.name}\t|\t{STATUS[self.status]}\t"
+        return f"[TASK]  {cl.CYAN}{self.name}{cl.BLANK}\t|\t{cl.BACKGROUND_GREEN}{self.status}{cl.BLANK}"
 
     def command_list(self) -> list:
         return self.cmd.split(" ")
@@ -171,8 +171,6 @@ class Task:
         try:
             self.stop()
         except TaskStopError:
-            # TODO Here think about task recovery
-            # A task cannot be stopped only because the main process doesn't have enough privilege (NOT sure)
             return
 
         self.run()
@@ -204,6 +202,8 @@ class Task:
         logging.debug(f"[{self.name}] Ended restart loop.")
 
     def display_status(self):
-        for proc in self.processes:
-            print(proc)
 
+        print(self)
+
+        for proc in self.processes:
+            print(f"  > {cl.MAGENTA}{proc.id}{cl.BLANK} {cl.BACKGROUND_GREEN}{STATUS[proc.status]}{cl.BLANK}")
