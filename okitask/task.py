@@ -36,7 +36,10 @@ class Process:
         return f"({self.process.pid}) {self.name}_{self.id} | {STATUS[self.status]}"
 
     def change_status(self, status: int):
-        self.status = status
+        if isinstance(status, int):
+            self.status = status
+        else:
+            raise SetTypeError("Value must be an int.")
 
     def set_retried(self, val: int):
         if not isinstance(val, int):
@@ -49,7 +52,6 @@ class Task:
     def __init__(self, name, **kwargs):
         self.name = name
         self.status = 0
-        self.exit_code = None
         self.processes: list[Process] = []
 
         try:
@@ -121,7 +123,10 @@ class Task:
         self.processes.append(proc)
 
     def set_status(self, status: int):
-        self.status = status
+        if isinstance(status, int):
+            self.status = status
+        else:
+            raise SetTypeError("Value must be an int.")
 
     def run(self):
 
@@ -197,4 +202,8 @@ class Task:
                         self.processes[i] = new_proc
                         del proc
         logging.debug(f"[{self.name}] Ended restart loop.")
+
+    def display_status(self):
+        for proc in self.processes:
+            print(proc)
 

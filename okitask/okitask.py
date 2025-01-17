@@ -50,7 +50,8 @@ def main(argv: list):
         print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
         return
     except IndexError:
-        print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} File not found")
+        print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} File not passed.")
+        print(f"{cl.BRIGHT_RED}File required. {cl.BLANK}")
         return
 
     # setting up logging
@@ -66,13 +67,17 @@ def main(argv: list):
 
     startup(tasks)
 
+    logging.debug(f"Starting main loop.")
     try:
         while 1:
             for task in tasks:
                 task.check_process_running()
                 task.restart_failed_processes()
     except KeyboardInterrupt:
-        return
+        logging.debug(f"Exiting main loop.")
+        for task in tasks:
+            task.stop()
+        logging.debug(f"Exited main loop.")
 
 
 if "__main__" == __name__:
