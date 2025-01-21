@@ -1,10 +1,10 @@
 import os
 import sys
-import subprocess
 import logging
 
 # utility directory
 import utility.colors as cl
+from utility.get_next_line import get_next_line as gnl
 from utility import logging_config
 
 # parser.py
@@ -13,7 +13,8 @@ import parser
 # task.py
 import task as ts
 
-
+# shell.py
+import shell as sh
 
 TITLE = """
  ██████╗ ██╗  ██╗██╗████████╗ █████╗ ███████╗██╗  ██╗
@@ -35,6 +36,36 @@ def startup(tasks: list[ts.Task]):
             task.run()
 
     logging.info(f"{cl.GREEN}Done.{cl.BLANK}")
+
+
+def main_loop(tasks: list[ts.Task], pipe_in):
+    logging.debug(f"Starting main loop.")
+    try:
+        while 1:
+            msg = gnl(pipe_in)
+            if msg.decode() == "exit":
+                raise KeyboardInterrupt("easter")
+
+            for task in tasks:
+                task.check_process_running()
+                task.restart_failed_processes()
+    except KeyboardInterrupt:
+        print("")
+        logging.debug(f"Exiting main loop.")
+        for task in tasks:
+            task.stop()
+        logging.debug(f"Exited main loop.")
+
+
+def shell_loop(tasks: list[ts.Task], loop_pid, pipe_out):
+
+    shell = sh.Shell()
+    while 1:
+        try:
+            inp = input("> ")
+            shell.parser(inp)
+        except KeyboardInterrupt:
+            os.write(pipe_out, b"exit\n")
 
 
 def main(argv: list):
@@ -67,18 +98,14 @@ def main(argv: list):
 
     startup(tasks)
 
-    logging.debug(f"Starting main loop.")
-    try:
-        while 1:
-            for task in tasks:
-                task.check_process_running()
-                task.restart_failed_processes()
-    except KeyboardInterrupt:
-        print("")
-        logging.debug(f"Exiting main loop.")
-        for task in tasks:
-            task.stop()
-        logging.debug(f"Exited main loop.")
+    pipe_in, pipe_out = os.pipe()
+    process_id = os.fork()
+    if process_id == 0:
+        os.close(pipe_out)          # main_loop close write pipe
+        main_loop(tasks, pipe_in)
+    else:
+        os.close(pipe_in)           # shell close write pipe
+        shell_loop(tasks, process_id, pipe_out)
 
 
 if "__main__" == __name__:
