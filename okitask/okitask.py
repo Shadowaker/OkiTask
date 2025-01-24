@@ -25,8 +25,6 @@ TITLE = """
  ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 """
 
-COMMANDS = []
-
 
 def startup(tasks: list[ts.Task]):
     logging.info(f"{cl.GREEN}Autostarting processes...{cl.BLANK}")
@@ -63,9 +61,17 @@ def shell_loop(tasks: list[ts.Task], loop_pid, pipe_out):
     while 1:
         try:
             inp = input("> ")
-            shell.parser(inp)
+            res = shell.parser(inp)
+            if isinstance(res, str):
+                print(res)
+            else:
+                if res is False:
+                    raise KeyboardInterrupt("HELLO")
         except KeyboardInterrupt:
+            print(f"\n{cl.YELLOW}Exiting...{cl.BLANK}", end="")
             os.write(pipe_out, b"exit\n")
+            os.wait()
+            break
 
 
 def main(argv: list):
@@ -101,11 +107,14 @@ def main(argv: list):
     pipe_in, pipe_out = os.pipe()
     process_id = os.fork()
     if process_id == 0:
-        os.close(pipe_out)          # main_loop close write pipe
+        os.close(pipe_out)          # main_loop close write pipe (maybe I should keep it open)
         main_loop(tasks, pipe_in)
+        os.close(pipe_in)
     else:
-        os.close(pipe_in)           # shell close write pipe
+        os.close(pipe_in)           # shell close write pipe (maybe I should keep it open)
         shell_loop(tasks, process_id, pipe_out)
+        os.close(pipe_out)
+        exit(0)
 
 
 if "__main__" == __name__:
@@ -119,4 +128,5 @@ if "__main__" == __name__:
     print(f"{cl.GREEN}Welcome {username}!{cl.BLANK}")
     main(sys.argv)
     print(f"{cl.BRIGHT_RED}Bye {username}!")
+
 
