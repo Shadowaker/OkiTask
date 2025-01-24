@@ -61,7 +61,7 @@ class Task:
             self.expected_output = kwargs.get("expected_outputs", [])
             self.time_start, self.max_retries = kwargs.get("time_start", 1), kwargs.get("max_retries", 1)
             self.kill_signal, self.time_stop = kwargs.get("kill_signal", "SIGKILL"), kwargs.get("time_stop", 1)
-            self.stdout, self.stderr, = kwargs.get("stduot", ""), kwargs.get("stderr", "")
+            self.stdout, self.stderr, = kwargs.get("stdout", ""), kwargs.get("stderr", "")
             self.env = kwargs.get("env", [])
             self.dir, self.umask = kwargs.get("dir", "."), kwargs.get("umask", "0666")
         except KeyError as e:
@@ -131,14 +131,24 @@ class Task:
     def run(self):
 
         logging.info(f"Starting {self.name}")
-        for x in range(0, self.amount):
+        for x in range(len(self.processes), self.amount):
+
+            if self.stdout != "":
+                f = open(self.stdout, "a")
+                os.chmod(self.stdout, 0o666) # this is here because the file are created by default without permission
+            else:
+                f = subprocess.PIPE
+            if self.stderr != "":
+                e = open(self.stderr, "a")
+                os.chmod(self.stdout, 0o666)
+            else:
+                e = subprocess.PIPE
 
             try:
-                proc = subprocess.Popen(self.command_list(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                proc = subprocess.Popen(self.command_list(), stdout=f, stderr=e)
                 proc = Process(x, f"{self.name}", proc)
                 self.processes.append(proc)
                 proc.change_status(STARTED)
-
                 logging.debug(f"Started {proc}.")
             except Exception as e:
                 logging.error(f"{cl.BRIGHT_RED}Error: Process {x} of task {self.name} failed.\nReason: {e}")
@@ -159,6 +169,11 @@ class Task:
                 proc.process.wait()
                 proc.change_status(STOPPED)
                 logging.debug(f"Stopped {proc}.")
+            except subprocess.TimeoutExpired:
+                logging.warning(f"Process {proc.id} did not stop in time. Forcing termination...")
+                proc.process.kill()
+                proc.process.wait()
+                proc.change_status(KILLED)
             except Exception as e:
                 logging.error(f"{cl.BRIGHT_RED}Error: Process {proc} failed to stop.\nReason: {e}")
                 raise TaskStopError(f"Can't stop task: {e}")

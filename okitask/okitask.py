@@ -1,6 +1,8 @@
+# stdlib
 import os
 import sys
 import logging
+import select
 
 # utility directory
 import utility.colors as cl
@@ -43,12 +45,15 @@ def main_loop(tasks: list[ts.Task], pipe_in):
             msg = gnl(pipe_in)
             if msg.decode() == "exit":
                 raise KeyboardInterrupt("easter")
+            if msg.decode() == "ps":
+                for task in tasks:
+                    task.display_status()
 
             for task in tasks:
                 task.check_process_running()
                 task.restart_failed_processes()
     except KeyboardInterrupt:
-        print("")
+        #print("")
         logging.debug(f"Exiting main loop.")
         for task in tasks:
             task.stop()
@@ -57,21 +62,31 @@ def main_loop(tasks: list[ts.Task], pipe_in):
 
 def shell_loop(tasks: list[ts.Task], loop_pid, pipe_out):
 
-    shell = sh.Shell()
+    shell = sh.Shell(pipe_out)
+    prompt = "> "
+
+    print(f"\r{prompt}", end="", flush=True)
     while 1:
         try:
-            inp = input("> ")
-            res = shell.parser(inp)
-            if isinstance(res, str):
-                print(res)
-            else:
-                if res is False:
-                    raise KeyboardInterrupt("HELLO")
+            rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
+            if rlist:
+                inp = sys.stdin.readline().strip()
+                res = shell.parser(inp)
+                if isinstance(res, str):
+                    print(res)
+                else:
+                    if res is False:
+                        raise KeyboardInterrupt("HELLO")
+                print(f"\r{prompt}", end="", flush=True)
         except KeyboardInterrupt:
-            print(f"\n{cl.YELLOW}Exiting...{cl.BLANK}", end="")
-            os.write(pipe_out, b"exit\n")
-            os.wait()
-            break
+            print(f"\n{cl.YELLOW}Exiting...{cl.BLANK}")
+            try:
+                os.write(pipe_out, b"exit\n")
+            except BrokenPipeError:
+                pass
+            pid, _ = os.waitpid(-1, os.WNOHANG)
+            if pid == 0:
+                break
 
 
 def main(argv: list):
@@ -92,7 +107,13 @@ def main(argv: list):
         return
 
     # setting up logging
-    logging.basicConfig(format='[%(levelname)s] %(message)s', level=log_conf.level)
+    logging.basicConfig(
+        format='[%(levelname)s] %(message)s',
+        level=log_conf.level,
+        handlers=[
+            logging.StreamHandler()
+        ]
+    )
 
     tasks = []
     for x in conf.tasks:

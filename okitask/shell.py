@@ -1,11 +1,13 @@
+import os
 
 class Shell:
 
-    def __init__(self):
+    def __init__(self, pipe_out):
         self.commands = {
             "display": self.general, "stop": self.general, "down": self.general, "run": self.general,
-            "up": self.general, "ps": self.general, "help": self.help_command, "exit": self.exit
+            "up": self.general, "ps": self.ps, "help": self.help_command, "exit": self.exit
         }
+        self.pipe_out = pipe_out
 
     def parser(self, inp: str):
 
@@ -30,6 +32,9 @@ class Shell:
         down\t\t\t - stop all tasks running\n
         ps\t\t\t - display all tasks running and their state\n
         """
+
+    def ps(self, args: list):
+        os.write(self.pipe_out, b"ps\n")
 
     def error(self):
         return "Command not found, if you need help type 'help'.\nType 'exit' for exiting the shell"
