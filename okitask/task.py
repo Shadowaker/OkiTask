@@ -160,11 +160,11 @@ class Task:
                     pass
                 return False
 
-        logging.info(f"{cl.GREEN}{self.name} started.{cl.BLANK}")
+        logging.info(f"{self.name} started.")
         self.status = "ACTIVE"
 
     def stop(self):
-        logging.info(f"{cl.YELLOW}Stopping {self.name} {cl.BLANK}")
+        logging.info(f"Stopping {self.name}")
         for proc in self.processes:
             try:
                 proc.process.terminate()
@@ -177,14 +177,14 @@ class Task:
                 proc.process.wait()
                 proc.change_status(KILLED)
             except Exception as e:
-                logging.error(f"{cl.BRIGHT_RED}Error: Process {proc} failed to stop.\nReason: {e}")
+                logging.error(f"Error: Process {proc} failed to stop.\nReason: {e}")
                 raise TaskStopError(f"Can't stop task: {e}")
 
-        logging.info(f"{cl.YELLOW}{self.name} stopped. {cl.BLANK}")
+        logging.info(f"{self.name} stopped.")
         self.status = "STOPPED"
 
     def restart(self):
-        logging.info(f"{cl.YELLOW}Restarting... {self.name} {cl.BLANK}")
+        logging.info(f"Restarting... {self.name}")
         try:
             self.stop()
         except TaskStopError:

@@ -3,6 +3,8 @@ import os
 import sys
 import logging
 import select
+import signal
+import threading
 
 # utility directory
 import utility.colors as cl
@@ -89,8 +91,13 @@ def main(argv: list):
         try:
             tasks.append(ts.Task(str(x), **conf.tasks[x]))
         except ts.TaskInitError as e:
-            logging.error(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
+            logging.error(f"Error: {e}")
             return
+
+    shell = sh.Shell(tasks)
+    shell_thread = threading.Thread(target=shell.cmdloop)
+    shell_thread.daemon = True
+    shell_thread.start()
 
     main_loop(tasks)
 
