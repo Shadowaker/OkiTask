@@ -1,10 +1,11 @@
 import os
 
+
 class Shell:
 
     def __init__(self, pipe_out):
         self.commands = {
-            "display": self.general, "stop": self.general, "down": self.general, "run": self.general,
+            "display": self.general, "stop": self.general, "down": self.general, "run": self.run,
             "up": self.general, "ps": self.ps, "help": self.help_command, "exit": self.exit
         }
         self.pipe_out = pipe_out
@@ -35,10 +36,19 @@ class Shell:
 
     def ps(self, args: list):
         os.write(self.pipe_out, b"ps\n")
+        return " "
+
+    def run(self, args: list):
+        tmp = "".join(f"{x} " for x in args)
+        tmp = f"run {tmp}"
+        os.write(self.pipe_out, bytes(tmp.encode()))
+        return " "
+
+    def stop(self, args: list):
+        pass
 
     def error(self):
         return "Command not found, if you need help type 'help'.\nType 'exit' for exiting the shell"
 
     def exit(self, args: list):
         return False
-

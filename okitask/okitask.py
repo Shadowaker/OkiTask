@@ -18,6 +18,10 @@ import task as ts
 # shell.py
 import shell as sh
 
+# errors.py
+from errors import TaskAlreadyRunning, TaskAlreadyStopped
+
+
 TITLE = """
  ██████╗ ██╗  ██╗██╗████████╗ █████╗ ███████╗██╗  ██╗
 ██╔═══██╗██║ ██╔╝██║╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝
@@ -29,64 +33,30 @@ TITLE = """
 
 
 def startup(tasks: list[ts.Task]):
-    logging.info(f"{cl.GREEN}Autostarting processes...{cl.BLANK}")
+    logging.info(f"Autostarting processes...")
 
     for task in tasks:
         if task.auto_start:
             task.run()
 
-    logging.info(f"{cl.GREEN}Done.{cl.BLANK}")
+    logging.info(f"Done.")
 
 
-def main_loop(tasks: list[ts.Task], pipe_in):
+
+def main_loop(tasks: list[ts.Task]):
+    startup(tasks)
+
     logging.debug(f"Starting main loop.")
     try:
         while 1:
-            msg = gnl(pipe_in)
-            if msg.decode() == "exit":
-                raise KeyboardInterrupt("easter")
-            if msg.decode() == "ps":
-                for task in tasks:
-                    task.display_status()
-
             for task in tasks:
                 task.check_process_running()
                 task.restart_failed_processes()
     except KeyboardInterrupt:
-        #print("")
         logging.debug(f"Exiting main loop.")
         for task in tasks:
             task.stop()
         logging.debug(f"Exited main loop.")
-
-
-def shell_loop(tasks: list[ts.Task], loop_pid, pipe_out):
-
-    shell = sh.Shell(pipe_out)
-    prompt = "> "
-
-    print(f"\r{prompt}", end="", flush=True)
-    while 1:
-        try:
-            rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
-            if rlist:
-                inp = sys.stdin.readline().strip()
-                res = shell.parser(inp)
-                if isinstance(res, str):
-                    print(res)
-                else:
-                    if res is False:
-                        raise KeyboardInterrupt("HELLO")
-                print(f"\r{prompt}", end="", flush=True)
-        except KeyboardInterrupt:
-            print(f"\n{cl.YELLOW}Exiting...{cl.BLANK}")
-            try:
-                os.write(pipe_out, b"exit\n")
-            except BrokenPipeError:
-                pass
-            pid, _ = os.waitpid(-1, os.WNOHANG)
-            if pid == 0:
-                break
 
 
 def main(argv: list):
@@ -108,11 +78,10 @@ def main(argv: list):
 
     # setting up logging
     logging.basicConfig(
+        filename="log.logs",
+        filemode='w',
         format='[%(levelname)s] %(message)s',
         level=log_conf.level,
-        handlers=[
-            logging.StreamHandler()
-        ]
     )
 
     tasks = []
@@ -123,20 +92,7 @@ def main(argv: list):
             logging.error(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
             return
 
-    startup(tasks)
-
-    pipe_in, pipe_out = os.pipe()
-    process_id = os.fork()
-    if process_id == 0:
-        os.close(pipe_out)          # main_loop close write pipe (maybe I should keep it open)
-        main_loop(tasks, pipe_in)
-        os.close(pipe_in)
-    else:
-        os.close(pipe_in)           # shell close write pipe (maybe I should keep it open)
-        shell_loop(tasks, process_id, pipe_out)
-        os.close(pipe_out)
-        exit(0)
-
+    main_loop(tasks)
 
 if "__main__" == __name__:
 

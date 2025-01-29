@@ -5,7 +5,7 @@ import logging
 
 from subprocess import Popen
 
-from errors import TaskInitError, SetTypeError, TaskStopError
+from errors import TaskInitError, SetTypeError, TaskStopError, TaskAlreadyRunning, TaskAlreadyStopped
 import utility.colors as cl
 
 STOPPED = 0
@@ -129,6 +129,8 @@ class Task:
             raise SetTypeError("Value must be an int.")
 
     def run(self):
+        if self.status != "STOPPED":
+            raise TaskAlreadyRunning("eheh")
 
         logging.info(f"Starting {self.name}")
         for x in range(len(self.processes), self.amount):
@@ -156,7 +158,7 @@ class Task:
                     self.stop()
                 except TaskStopError:
                     pass
-                return
+                return False
 
         logging.info(f"{cl.GREEN}{self.name} started.{cl.BLANK}")
         self.status = "ACTIVE"
@@ -221,4 +223,5 @@ class Task:
         print(self)
 
         for proc in self.processes:
-            print(f"  > {cl.MAGENTA}{proc.id}{cl.BLANK} {cl.BACKGROUND_GREEN}{STATUS[proc.status]}{cl.BLANK}")
+            exit_code = f"exited with code: {proc.process.returncode}" if proc.process.returncode is not None else ""
+            print(f"  > {cl.MAGENTA}{proc.id}{cl.BLANK} {cl.BACKGROUND_GREEN}{STATUS[proc.status]}{cl.BLANK} | {exit_code}")
