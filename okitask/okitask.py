@@ -46,10 +46,10 @@ def startup(tasks: list[ts.Task]):
 
 
 def main_loop(tasks: list[ts.Task]):
-    startup(tasks)
 
     logging.debug(f"Starting main loop.")
     try:
+        startup(tasks)
         while 1:
             for task in tasks:
                 task.check_process_running()
@@ -94,12 +94,22 @@ def main(argv: list):
             logging.error(f"Error: {e}")
             return
 
-    shell = sh.Shell(tasks)
-    shell_thread = threading.Thread(target=shell.cmdloop)
-    shell_thread.daemon = True
-    shell_thread.start()
+    try:
+        shell = sh.Shell(tasks)
+        shell_thread = threading.Thread(target=shell.cmdloop)
+        shell_thread.daemon = True
+        shell_thread.start()
+    except KeyboardInterrupt:
+        logging.debug("Exiting from keyboard")
+        return
 
     main_loop(tasks)
+
+    logging.debug(f"Exiting main loop.")
+    for task in tasks:
+        task.stop()
+    logging.debug(f"Exited main loop.")
+
 
 if "__main__" == __name__:
 
@@ -110,7 +120,10 @@ if "__main__" == __name__:
 
     print("\n", TITLE,)
     print(f"{cl.GREEN}Welcome {username}!{cl.BLANK}")
-    main(sys.argv)
+    try:
+        main(sys.argv)
+    except KeyboardInterrupt:
+        pass
     print(f"{cl.BRIGHT_RED}Bye {username}!")
 
 
