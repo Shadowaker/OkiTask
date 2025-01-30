@@ -9,7 +9,7 @@ class Shell(cmd.Cmd):
         super().__init__()
         self.tasks = tasks
 
-    def do_start(self, arg):
+    def do_run(self, arg):
         'Start a specified task: start task_name'
         task = self._get_task(arg)
         if task:
@@ -27,7 +27,7 @@ class Shell(cmd.Cmd):
         if task:
             task.restart()
 
-    def do_status(self, arg):
+    def do_status(self, arg: list[str]):
         'Display the status of all tasks'
         for task in self.tasks:
             task.display_status()
