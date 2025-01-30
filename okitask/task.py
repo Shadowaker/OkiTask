@@ -2,6 +2,7 @@ import signal
 import os
 import subprocess
 import logging
+import time
 
 from subprocess import Popen
 
@@ -66,6 +67,8 @@ class Task:
             self.dir, self.umask = kwargs.get("dir", "."), kwargs.get("umask", "0666")
         except KeyError as e:
             raise TaskInitError("Can't init task object")
+
+        self.started_time = 0
 
         d = {
             "name": str, "cmd": str, "amount": int, "auto_start": bool,
@@ -159,6 +162,7 @@ class Task:
                 except TaskStopError:
                     pass
                 return False
+        self.started_time = time.time()
 
         logging.info(f"{self.name} started.")
         self.status = "ACTIVE"
@@ -197,6 +201,9 @@ class Task:
 
         for proc in self.processes:
             if proc.process.poll() is None:
+                if task.time_start:
+                    if round(task.started_time - time.time()) > task.time_start:
+                        proc.change_status(ACTIVE)
                 continue
             proc.change_status(EXITED)
         logging.debug(f"[{self.name}] Ended check loop.")
