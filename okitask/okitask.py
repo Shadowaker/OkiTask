@@ -55,11 +55,7 @@ def main_loop(tasks: list[ts.Task]):
                 task.check_process_running()
                 task.restart_failed_processes()
     except KeyboardInterrupt:
-        logging.debug(f"Exiting main loop.")
-        for task in tasks:
-            task.stop()
-        logging.debug(f"Exited main loop.")
-
+        pass
 
 def main(argv: list):
 
@@ -80,8 +76,8 @@ def main(argv: list):
 
     # setting up logging
     logging.basicConfig(
-        filename="log.logs",
-        filemode='w',
+        #filename="log.logs",
+        #filemode='w',
         format='[%(levelname)s] %(message)s',
         level=log_conf.level,
     )
@@ -106,6 +102,7 @@ def main(argv: list):
     main_loop(tasks)
 
     logging.debug(f"Exiting main loop.")
+    print("Cleaning...")
     for task in tasks:
         task.stop()
     logging.debug(f"Exited main loop.")

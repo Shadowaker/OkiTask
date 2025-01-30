@@ -60,7 +60,7 @@ class Task:
             self.auto_start = kwargs.get("auto_start", True)
             self.auto_restart = kwargs.get("auto_restart", "never")
             self.expected_output = kwargs.get("expected_outputs", [])
-            self.time_start, self.max_retries = kwargs.get("time_start", 1), kwargs.get("max_retries", 1)
+            self.time_start, self.max_retries = kwargs.get("time_start", 0), kwargs.get("max_retries", 1)
             self.kill_signal, self.time_stop = kwargs.get("kill_signal", "SIGKILL"), kwargs.get("time_stop", 1)
             self.stdout, self.stderr, = kwargs.get("stdout", ""), kwargs.get("stderr", "")
             self.env = kwargs.get("env", [])
@@ -201,9 +201,8 @@ class Task:
 
         for proc in self.processes:
             if proc.process.poll() is None:
-                if task.time_start:
-                    if round(task.started_time - time.time()) > task.time_start:
-                        proc.change_status(ACTIVE)
+                if (time.time() - self.started_time) >= self.time_start:
+                    proc.change_status(ACTIVE)
                 continue
             proc.change_status(EXITED)
         logging.debug(f"[{self.name}] Ended check loop.")
