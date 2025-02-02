@@ -32,6 +32,13 @@ TITLE = """
 ╚██████╔╝██║  ██╗██║   ██║   ██║  ██║███████║██║  ██╗
  ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 """
+RUNNING = True
+
+
+def stop():
+
+    global RUNNING
+    RUNNING = False
 
 
 def startup(tasks: list[ts.Task]):
@@ -48,17 +55,15 @@ def startup(tasks: list[ts.Task]):
 def main_loop(tasks: list[ts.Task]):
 
     logging.debug(f"Starting main loop.")
-    try:
-        startup(tasks)
-        while 1:
-            for task in tasks:
-                task.check_process_running()
-                task.restart_failed_processes()
-    except KeyboardInterrupt:
-        pass
+    startup(tasks)
+    while RUNNING:
+        for task in tasks:
+            task.check_process_running()
+            task.restart_failed_processes()
 
 def main(argv: list):
 
+    global RUNNING
     # getting configs
     try:
         conf = parser.ConfigParser(argv[1])
@@ -91,13 +96,12 @@ def main(argv: list):
             return
 
     try:
-        shell = sh.Shell(tasks)
+        shell = sh.Shell(tasks, stop)
         shell_thread = threading.Thread(target=shell.cmdloop)
         shell_thread.daemon = True
         shell_thread.start()
     except KeyboardInterrupt:
-        logging.debug("Exiting from keyboard")
-        return
+        RUNNING = False
 
     main_loop(tasks)
 

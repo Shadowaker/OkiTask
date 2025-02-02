@@ -5,9 +5,10 @@ class Shell(cmd.Cmd):
     intro = 'Type help or ? to list commands.\nCTRL+C to exit.\n'
     prompt = '> '
 
-    def __init__(self, tasks):
+    def __init__(self, tasks, stop):
         super().__init__()
         self.tasks = tasks
+        self.stop = stop
 
     def do_run(self, arg):
         'Start a specified task: start task_name'
@@ -34,9 +35,7 @@ class Shell(cmd.Cmd):
 
     def do_exit(self, arg):
         'Exit the shell and stop the program'
-        for task in self.tasks:
-            task.stop()
-        exit(0)
+        self.stop()
 
     def _get_task(self, name):
         for task in self.tasks:
