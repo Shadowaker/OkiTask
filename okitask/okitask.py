@@ -2,13 +2,10 @@
 import os
 import sys
 import logging
-import select
-import signal
 import threading
 
 # utility directory
 import utility.colors as cl
-from utility.get_next_line import get_next_line as gnl
 from utility import logging_config
 
 # parser.py
@@ -20,9 +17,6 @@ import task as ts
 # shell.py
 import shell as sh
 
-# errors.py
-from errors import TaskAlreadyRunning, TaskAlreadyStopped
-
 
 TITLE = """
  ██████╗ ██╗  ██╗██╗████████╗ █████╗ ███████╗██╗  ██╗
@@ -33,12 +27,13 @@ TITLE = """
  ╚═════╝ ╚═╝  ╚═╝╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 """
 RUNNING = True
-
+RUNNING_MUTEX = threading.Lock()
 
 def stop():
-
     global RUNNING
-    RUNNING = False
+
+    with RUNNING_MUTEX:
+        RUNNING = False
 
 
 def startup(tasks: list[ts.Task]):
@@ -63,7 +58,6 @@ def main_loop(tasks: list[ts.Task]):
 
 def main(argv: list):
 
-    global RUNNING
     # getting configs
     try:
         conf = parser.ConfigParser(argv[1])
@@ -101,7 +95,7 @@ def main(argv: list):
         shell_thread.daemon = True
         shell_thread.start()
     except KeyboardInterrupt:
-        RUNNING = False
+        stop()
 
     main_loop(tasks)
 
