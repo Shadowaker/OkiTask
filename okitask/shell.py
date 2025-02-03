@@ -33,9 +33,12 @@ class Shell(cmd.Cmd):
         for task in self.tasks:
             task.display_status()
 
-    def do_exit(self, arg):
+    def do_exit(self, arg: list[str]):
         """Exit the shell and stop the program"""
         self.stop()
+
+    def do_reload(self, arg: list[str]):
+        pass
 
     def _get_task(self, name):
         for task in self.tasks:

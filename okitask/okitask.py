@@ -46,7 +46,6 @@ def startup(tasks: list[ts.Task]):
     logging.info(f"Done.")
 
 
-
 def main_loop(tasks: list[ts.Task]):
 
     logging.debug(f"Starting main loop.")
