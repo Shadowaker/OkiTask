@@ -11,30 +11,30 @@ class Shell(cmd.Cmd):
         self.stop = stop
 
     def do_run(self, arg):
-        'Start a specified task: start task_name'
+        """Start a specified task: start task_name"""
         task = self._get_task(arg)
         if task:
             task.run()
 
     def do_stop(self, arg):
-        'Stop a specified task: stop task_name'
+        """Stop a specified task: stop task_name"""
         task = self._get_task(arg)
         if task:
             task.stop()
 
     def do_restart(self, arg):
-        'Restart a specified task: restart task_name'
+        """Restart a specified task: restart task_name"""
         task = self._get_task(arg)
         if task:
             task.restart()
 
     def do_status(self, arg: list[str]):
-        'Display the status of all tasks'
+        """Display the status of all tasks"""
         for task in self.tasks:
             task.display_status()
 
     def do_exit(self, arg):
-        'Exit the shell and stop the program'
+        """Exit the shell and stop the program"""
         self.stop()
 
     def _get_task(self, name):
