@@ -1,5 +1,4 @@
 import cmd
-import logging
 
 class Shell(cmd.Cmd):
     intro = 'Type help or ? to list commands.\nCTRL+C to exit.\n'

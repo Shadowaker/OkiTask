@@ -212,7 +212,7 @@ class Task:
         logging.debug(f"[{self.name}] Starting restart loop...")
         for i, proc in enumerate(self.processes):
             if proc.status == EXITED:
-                if proc.process.returncode < 0:
+                if proc.process.returncode != 0: # TODO and filter by expected outputs
                     if self.max_retries > proc.retried:
                         new_proc = subprocess.Popen(
                             self.command_list(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
