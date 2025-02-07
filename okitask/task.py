@@ -23,6 +23,13 @@ STATUS = {
     4: "EXITED"
 }
 
+TASK_DEFINITION_TYPES = {
+            "name": str, "cmd": str, "amount": int, "auto_start": bool,
+            "auto_restart": str, "expected_output": list, "time_start": int,
+            "max_retries": int, "kill_signal": str, "time_stop": int,
+            "stdout": str, "stderr": str, "env": dict, "dir": str, "umask": str
+        }
+
 
 class Process:
 
@@ -32,6 +39,7 @@ class Process:
         self.process = process
         self.status = STOPPED
         self.retried = 0
+        self.started_time = time.time()
 
     def __str__(self):
         return f"({self.process.pid}) {self.name}_{self.id} | {STATUS[self.status]}"
@@ -46,13 +54,6 @@ class Process:
         if not isinstance(val, int):
             raise SetTypeError("Value must be an int.")
         self.retried = val
-
-TASK_DEFINITION_TYPES = {
-            "name": str, "cmd": str, "amount": int, "auto_start": bool,
-            "auto_restart": str, "expected_output": list, "time_start": int,
-            "max_retries": int, "kill_signal": str, "time_stop": int,
-            "stdout": str, "stderr": str, "env": dict, "dir": str, "umask": str
-        }
 
 class TaskDefinition:
 
@@ -103,7 +104,7 @@ class TaskDefinition:
         except ValueError:
             raise TaskInitError(f"The passed umask ({self.umask}) is not an octal")
 
-        if 0 <= self.umask <= 0o777:
+        if not 0 <= self.umask <= 0o777:
             raise TaskInitError(f"The passed umask ({self.umask}) is not valid")
 
     def get_command_list(self) -> list[str]:
@@ -206,7 +207,7 @@ class Task:
 
         for proc in self.processes:
             if proc.process.poll() is None:
-                if (time.time() - self.started_time) >= self.time_start:
+                if (time.time() - proc.started_time) >= self.definition.time_start:
                     proc.change_status(ACTIVE)
                 continue
             proc.change_status(EXITED)
@@ -217,8 +218,8 @@ class Task:
         logging.debug(f"[{self.name}] Starting restart loop...")
         for i, proc in enumerate(self.processes):
             if proc.status == EXITED:
-                if proc.process.returncode != 0: # TODO and filter by expected outputs
-                    if self.max_retries > proc.retried:
+                if proc.process.returncode != 0: # TODO and filter by expected outputs and skip if stopped
+                    if self.definition.max_retries > proc.retried:
                         new_proc = subprocess.Popen(
                             self.command_list(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                             text=True

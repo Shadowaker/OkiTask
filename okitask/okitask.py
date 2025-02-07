@@ -40,7 +40,7 @@ def startup(tasks: list[ts.Task]):
     logging.info(f"Autostarting processes...")
 
     for task in tasks:
-        if task.auto_start:
+        if task.definition.auto_start:
             task.run()
 
     logging.info(f"Done.")
