@@ -47,14 +47,16 @@ class Process:
             raise SetTypeError("Value must be an int.")
         self.retried = val
 
-class Task:
-    """Task base class"""
+TASK_DEFINITION_TYPES = {
+            "name": str, "cmd": str, "amount": int, "auto_start": bool,
+            "auto_restart": str, "expected_output": list, "time_start": int,
+            "max_retries": int, "kill_signal": str, "time_stop": int,
+            "stdout": str, "stderr": str, "env": dict, "dir": str, "umask": str
+        }
 
-    def __init__(self, name, **kwargs):
-        self.name = name
-        self.status = "STOPPED"
-        self.processes: list[Process] = []
+class TaskDefinition:
 
+    def __init__(self, **kwargs):
         try:
             self.cmd, self.amount = kwargs["cmd"], kwargs["amount"]
             self.auto_start = kwargs.get("auto_start", True)
@@ -65,29 +67,24 @@ class Task:
             self.stdout, self.stderr, = kwargs.get("stdout", ""), kwargs.get("stderr", "")
             self.env = kwargs.get("env", [])
             self.dir, self.umask = kwargs.get("dir", "."), kwargs.get("umask", "0666")
-        except KeyError as e:
+        except KeyError:
             raise TaskInitError("Can't init task object")
 
-        self.started_time = 0
+        self._validate_types()
+        self._validate_values()
 
-        d = {
-            "name": str, "cmd": str, "amount": int, "auto_start": bool,
-            "auto_restart": str, "expected_output": list, "time_start": int,
-            "max_retries": int, "kill_signal": str, "time_stop": int,
-            "stdout": str, "stderr": str, "env": dict, "dir": str, "umask": str
-        }
-
-        # check config types
+    def _validate_types(self):
         for x in dir(self):
             try:
-                if not isinstance(getattr(self, x), d[x]):
+                if not isinstance(getattr(self, x), TASK_DEFINITION_TYPES[x]):
                     raise TaskInitError(
                         f"Config passed not valid!\n"
-                        f"{x} needs to be {d[x]}"
+                        f"{x} needs to be {TASK_DEFINITION_TYPES[x]}"
                     )
             except KeyError:
                 continue
 
+    def _validate_values(self):
         try:
             self.kill_signal = getattr(signal.Signals, self.kill_signal)
         except AttributeError:
@@ -97,30 +94,35 @@ class Task:
             raise TaskInitError(f"Auto Restart is not valid, needs to be 'never', 'always' or 'unexpected'")
 
         if self.dir == ".":
-            self.home = os.getcwd()
-        else:
-            try:
-                os.chdir(self.dir)
-            except OSError:
+            self.dir = os.getcwd()
+        elif os.path.isdir(self.dir) and os.access(path=self.dir, mode=os.X_OK):
                 raise TaskInitError(f"The passed dir ({self.dir}) config is not valid")
 
         try:
             self.umask = int(self.umask, 8)
         except ValueError:
             raise TaskInitError(f"The passed umask ({self.umask}) is not an octal")
-        try:
-            os.umask(self.umask)
-        except OSError:
+
+        if 0 <= self.umask <= 0o777:
             raise TaskInitError(f"The passed umask ({self.umask}) is not valid")
 
-        for x in self.env:
-            os.putenv(str(x), self.env[x])
+    def get_command_list(self) -> list[str]:
+        return self.cmd.split(" ")
+
+
+
+class Task:
+    """Task base class"""
+
+    def __init__(self, name, definition: TaskDefinition):
+        self.name = name
+        self.definition = definition
+        self.status = "STOPPED"
+        self.processes: list[Process] = []
+        self.started_time = 0
 
     def __str__(self):
         return f"[TASK]  {cl.CYAN}{self.name}{cl.BLANK}\t|\t{cl.BACKGROUND_GREEN}{self.status}{cl.BLANK}"
-
-    def command_list(self) -> list:
-        return self.cmd.split(" ")
 
     def add_process(self, proc: Process):
         self.processes.append(proc)
@@ -136,21 +138,24 @@ class Task:
             raise TaskAlreadyRunning("eheh")
 
         logging.info(f"Starting {self.name}")
-        for x in range(len(self.processes), self.amount):
+        for x in range(len(self.processes), self.definition.amount):
 
-            if self.stdout != "":
-                f = open(self.stdout, "a")
-                os.chmod(self.stdout, 0o666) # this is here because the file are created by default without permission
+            if self.definition.stdout != "":
+                f = open(self.definition.stdout, "a")
+                os.chmod(self.definition.stdout, 0o666) # this is here because the file are created by default without permission
             else:
                 f = subprocess.PIPE
-            if self.stderr != "":
-                e = open(self.stderr, "a")
-                os.chmod(self.stdout, 0o666)
+            if self.definition.stderr != "":
+                e = open(self.definition.stderr, "a")
+                os.chmod(self.definition.stdout, 0o666)
             else:
                 e = subprocess.PIPE
 
+            for l in self.definition.env:
+                os.putenv(str(l), self.definition.env[l])
+
             try:
-                proc = subprocess.Popen(self.command_list(), stdout=f, stderr=e)
+                proc = subprocess.Popen(self.definition.get_command_list(), stdout=f, stderr=e)
                 proc = Process(x, f"{self.name}", proc)
                 self.processes.append(proc)
                 proc.change_status(STARTED)

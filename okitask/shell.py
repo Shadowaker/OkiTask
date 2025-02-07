@@ -39,6 +39,9 @@ class Shell(cmd.Cmd):
     def do_reload(self, arg: list[str]):
         pass
 
+    def do_reload(self, arg):
+        'Reload the config file'
+
     def _get_task(self, name):
         for task in self.tasks:
             if task.name == name:

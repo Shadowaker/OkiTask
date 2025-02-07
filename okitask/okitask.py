@@ -55,22 +55,22 @@ def main_loop(tasks: list[ts.Task]):
             task.check_process_running()
             task.restart_failed_processes()
 
-def main(argv: list):
+def load_config(config_name: str):
 
-    # getting configs
     try:
-        conf = parser.ConfigParser(argv[1])
-        try:
-            log_conf = logging_config.LoggingConfig(**conf.log)
-        except [NotImplementedError, AttributeError]:
-            log_conf = logging_config.LoggingConfig(level="DEBUG")
+        conf = parser.ConfigParser(config_name)
     except parser.ParseError as e:
         print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} {e}")
-        return
+        return None
     except IndexError:
         print(f"{cl.BRIGHT_RED}Error:{cl.BLANK} File not passed.{cl.BLANK}")
         print(f"{cl.BRIGHT_RED}File required. {cl.BLANK}")
-        return
+        return None
+
+    try:
+        log_conf = logging_config.LoggingConfig(**conf.log)
+    except [NotImplementedError, AttributeError]:
+        log_conf = logging_config.LoggingConfig(level="DEBUG")
 
     # setting up logging
     logging.basicConfig(
@@ -79,11 +79,17 @@ def main(argv: list):
         format='[%(levelname)s] %(message)s',
         level=log_conf.level,
     )
+    return conf
+
+def main(argv: list):
+
+    conf = load_config(argv[1])
 
     tasks = []
     for x in conf.tasks:
         try:
-            tasks.append(ts.Task(str(x), **conf.tasks[x]))
+            definition = ts.TaskDefinition(**conf.tasks[x])
+            tasks.append(ts.Task(str(x), definition))
         except ts.TaskInitError as e:
             logging.error(f"Error: {e}")
             return
