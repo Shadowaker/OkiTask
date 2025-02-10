@@ -76,6 +76,7 @@ def main_loop():
             task.restart_failed_processes()
 
 def reload():
+    logging.info("Reloading config file")
     conf = load_config(sys.argv[1])
     task_definitions = {}
 
@@ -103,6 +104,8 @@ def reload():
             continue
 
         task.reconcile()
+
+    logging.info("Config file reloaded")
 
 
 
