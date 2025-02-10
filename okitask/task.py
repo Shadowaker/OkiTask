@@ -3,6 +3,7 @@ import os
 import subprocess
 import logging
 import time
+from enum import IntEnum
 
 from subprocess import Popen
 
@@ -87,7 +88,7 @@ class TaskDefinition:
 
     def _validate_values(self):
         try:
-            self.kill_signal = getattr(signal.Signals, self.kill_signal)
+            self.kill_signal = getattr(signal.Signals, self.kill_signal).value
         except AttributeError:
             raise TaskInitError(f"Kill signal needs to be a valid signal, not {self.kill_signal}")
 
@@ -110,6 +111,14 @@ class TaskDefinition:
     def get_command_list(self) -> list[str]:
         return self.cmd.split(" ")
 
+    def get_updated_env(self):
+        current_env = os.environ.copy()
+        for key in self.env:
+            current_env[key] = self.env[key]
+        return current_env
+
+    def should_be_restarted(self, other: "TaskDefinition") -> bool:
+        return self.cmd != other.cmd or self.stdout != other.stdout or self.stderr != other.stderr or self.env != other.env or self.dir != other.dir != self.umask != other.umask
 
 
 class Task:
@@ -120,55 +129,59 @@ class Task:
         self.definition = definition
         self.status = "STOPPED"
         self.processes: list[Process] = []
-        self.started_time = 0
 
     def __str__(self):
         return f"[TASK]  {cl.CYAN}{self.name}{cl.BLANK}\t|\t{cl.BACKGROUND_GREEN}{self.status}{cl.BLANK}"
 
-    def add_process(self, proc: Process):
-        self.processes.append(proc)
-
-    def set_status(self, status: int):
-        if isinstance(status, int):
-            self.status = status
+    def _start_process(self, proc_id: int):
+        logging.info(f"Starting a new {self.name} process.")
+        if self.definition.stdout != "":
+            output_file = open(self.definition.stdout, "a")
+            os.chmod(self.definition.stdout, 0o666)
         else:
-            raise SetTypeError("Value must be an int.")
+            output_file = subprocess.PIPE
+        if self.definition.stderr != "":
+            error_file = open(self.definition.stderr, "a")
+            os.chmod(self.definition.stdout, 0o666)
+        else:
+            error_file = subprocess.PIPE
 
-    def run(self):
-        if self.status != "STOPPED":
-            raise TaskAlreadyRunning("eheh")
+        try:
+            proc = subprocess.Popen(self.definition.get_command_list(), stdout=output_file, stderr=error_file, cwd=self.definition.dir, umask=int(self.definition.umask), env=self.definition.get_updated_env())
+            proc = Process(proc_id, f"{self.name}", proc)
+            self.processes.append(proc)
+            proc.change_status(STARTED)
+            logging.debug(f"Started {proc}.")
+            return proc
+        except Exception as e:
+            logging.error(f"{cl.BRIGHT_RED}Error: Process {proc_id} of task {self.name} failed.\nReason: {e}")
+            return None
+
+    def _stop_process(self, proc: Process, remove: bool = False):
+        try:
+            proc.process.send_signal(IntEnum(self.definition.kill_signal))
+            proc.process.wait()
+            proc.change_status(STOPPED)
+            logging.debug(f"Stopped {proc}.")
+        except Exception as e:
+            logging.warning(f"Process {proc.id} did not stop in gracefully. Forcing termination...")
+            proc.process.kill()
+            proc.process.wait()
+            proc.change_status(KILLED)
+        self.processes.remove(proc)
+
+    def run(self, force: bool = False):
+        if self.status != "STOPPED" and not force:
+            raise TaskAlreadyRunning("This task is already running")
 
         logging.info(f"Starting {self.name}")
         for x in range(len(self.processes), self.definition.amount):
-
-            if self.definition.stdout != "":
-                f = open(self.definition.stdout, "a")
-                os.chmod(self.definition.stdout, 0o666) # this is here because the file are created by default without permission
-            else:
-                f = subprocess.PIPE
-            if self.definition.stderr != "":
-                e = open(self.definition.stderr, "a")
-                os.chmod(self.definition.stdout, 0o666)
-            else:
-                e = subprocess.PIPE
-
-            for l in self.definition.env:
-                os.putenv(str(l), self.definition.env[l])
-
-            try:
-                proc = subprocess.Popen(self.definition.get_command_list(), stdout=f, stderr=e)
-                proc = Process(x, f"{self.name}", proc)
-                self.processes.append(proc)
-                proc.change_status(STARTED)
-                logging.debug(f"Started {proc}.")
-            except Exception as e:
-                logging.error(f"{cl.BRIGHT_RED}Error: Process {x} of task {self.name} failed.\nReason: {e}")
+            if self._start_process(x) is None:
                 try:
                     self.stop()
                 except TaskStopError:
                     pass
                 return False
-        self.started_time = time.time()
 
         logging.info(f"{self.name} started.")
         self.status = "ACTIVE"
@@ -176,19 +189,7 @@ class Task:
     def stop(self):
         logging.info(f"Stopping {self.name}")
         for proc in self.processes:
-            try:
-                proc.process.terminate()
-                proc.process.wait()
-                proc.change_status(STOPPED)
-                logging.debug(f"Stopped {proc}.")
-            except subprocess.TimeoutExpired:
-                logging.warning(f"Process {proc.id} did not stop in time. Forcing termination...")
-                proc.process.kill()
-                proc.process.wait()
-                proc.change_status(KILLED)
-            except Exception as e:
-                logging.error(f"Error: Process {proc} failed to stop.\nReason: {e}")
-                raise TaskStopError(f"Can't stop task: {e}")
+            self._stop_process(proc)
 
         logging.info(f"{self.name} stopped.")
         self.status = "STOPPED"
@@ -198,9 +199,20 @@ class Task:
         try:
             self.stop()
         except TaskStopError:
-            return
+            pass
 
         self.run()
+
+    def reconcile(self):
+        logging.info(f"Reconciling... {self.name}")
+        if len(self.processes) > self.definition.amount:
+            logging.debug(f"{self.name} has more processes than the amount defined in the config file. Removing extra processes.")
+            for proc in self.processes[self.definition.amount:]:
+                self._stop_process(proc, True)
+        elif len(self.processes) < self.definition.amount:
+            logging.debug(f"{self.name} has less processes than the amount defined in the config file. Adding extra processes.")
+            self.run(True)
+
 
     def check_process_running(self):
         logging.debug(f"[{self.name}] Starting check loop...")
@@ -220,20 +232,16 @@ class Task:
             if proc.status == EXITED:
                 if proc.process.returncode != 0: # TODO and filter by expected outputs and skip if stopped
                     if self.definition.max_retries > proc.retried:
-                        new_proc = subprocess.Popen(
-                            self.command_list(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            text=True
-                        )
-                        new_proc = Process(proc.id, f"{self.name}", new_proc)
-                        new_proc.set_retried(proc.retried + 1)
-                        self.processes[i] = new_proc
-                        del proc
+                       new_proc = self._start_process(proc.id)
+                       new_proc.set_retried(proc.retried + 1)
+                       self.processes[i] = new_proc
+                       del proc
+
         logging.debug(f"[{self.name}] Ended restart loop.")
 
     def display_status(self):
 
         print(self)
-
         for proc in self.processes:
             exit_code = f"exited with code: {proc.process.returncode}" if proc.process.returncode is not None else ""
             print(f"  > {cl.MAGENTA}{proc.id}{cl.BLANK} {cl.BACKGROUND_GREEN}{STATUS[proc.status]}{cl.BLANK} | {exit_code}")

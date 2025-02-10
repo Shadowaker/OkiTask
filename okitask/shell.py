@@ -1,46 +1,61 @@
 import cmd
 
+
 class Shell(cmd.Cmd):
     intro = 'Type help or ? to list commands.\nCTRL+C to exit.\n'
     prompt = '> '
 
-    def __init__(self, tasks, stop):
+    def __init__(self, tasks, stop, reload, should_reload):
         super().__init__()
         self.tasks = tasks
         self.stop = stop
+        self.reload = reload
+        self.should_reload = should_reload
 
     def do_run(self, arg):
         """Start a specified task: start task_name"""
+        if self.should_reload():
+            return
         task = self._get_task(arg)
         if task:
             task.run()
 
     def do_stop(self, arg):
         """Stop a specified task: stop task_name"""
+        if self.should_reload():
+            return
         task = self._get_task(arg)
         if task:
             task.stop()
 
     def do_restart(self, arg):
         """Restart a specified task: restart task_name"""
+        if self.should_reload():
+            return
         task = self._get_task(arg)
         if task:
             task.restart()
 
     def do_status(self, arg: list[str]):
         """Display the status of all tasks"""
+        if self.should_reload():
+            return
         for task in self.tasks:
             task.display_status()
 
     def do_exit(self, arg: list[str]):
         """Exit the shell and stop the program"""
+        if self.should_reload():
+            return
         self.stop()
 
     def do_reload(self, arg: list[str]):
+        """Reload the config file"""
+        if self.should_reload():
+            return
+        self.reload()
         pass
 
-    def do_reload(self, arg):
-        'Reload the config file'
 
     def _get_task(self, name):
         for task in self.tasks:

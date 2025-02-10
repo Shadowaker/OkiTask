@@ -29,31 +29,82 @@ TITLE = """
 RUNNING = True
 RUNNING_MUTEX = threading.Lock()
 
+SHOULD_RELOAD = False
+SHOULD_RELOAD_MUTEX = threading.Lock()
+
+TASKS = []
+
 def stop():
     global RUNNING
 
     with RUNNING_MUTEX:
         RUNNING = False
 
+def execute_reload(b: bool = True):
+    global SHOULD_RELOAD
 
-def startup(tasks: list[ts.Task]):
+    with SHOULD_RELOAD_MUTEX:
+        SHOULD_RELOAD = b
+
+def should_reload():
+    global SHOULD_RELOAD
+
+    with SHOULD_RELOAD_MUTEX:
+        return SHOULD_RELOAD
+
+
+def startup():
     logging.info(f"Autostarting processes...")
 
-    for task in tasks:
+    for task in TASKS:
         if task.definition.auto_start:
             task.run()
 
     logging.info(f"Done.")
 
 
-def main_loop(tasks: list[ts.Task]):
+def main_loop():
 
     logging.debug(f"Starting main loop.")
-    startup(tasks)
+    startup()
     while RUNNING:
-        for task in tasks:
+        if should_reload():
+            reload()
+
+        for task in TASKS:
             task.check_process_running()
             task.restart_failed_processes()
+
+def reload():
+    conf = load_config(sys.argv[1])
+    task_definitions = {}
+
+    for key in conf.tasks:
+        try:
+            definition = ts.TaskDefinition(**conf.tasks[key])
+            task_definitions[key] = definition
+        except ts.TaskInitError as e:
+            logging.error(f"Error while reloading config: {e}")
+            logging.error("Keeping the old config file. Fix the syntax errors to reload.")
+            return
+
+    for task in TASKS:
+        if task.name not in task_definitions:
+            logging.info(f"Task {task.name} not found in the new config file. Stopping...")
+            task.stop()
+            TASKS.remove(task)
+            continue
+
+        old_definition = task.definition
+        task.definition = task_definitions[task.name]
+        if task.definition.should_be_restarted(old_definition):
+            logging.info(f"Task {task.name} definition changed parameters that are not hot-reloadable. Restarting...")
+            task.restart()
+            continue
+
+        task.reconcile()
+
+
 
 def load_config(config_name: str):
 
@@ -85,28 +136,27 @@ def main(argv: list):
 
     conf = load_config(argv[1])
 
-    tasks = []
     for x in conf.tasks:
         try:
             definition = ts.TaskDefinition(**conf.tasks[x])
-            tasks.append(ts.Task(str(x), definition))
+            TASKS.append(ts.Task(str(x), definition))
         except ts.TaskInitError as e:
             logging.error(f"Error: {e}")
             return
 
     try:
-        shell = sh.Shell(tasks, stop)
+        shell = sh.Shell(TASKS, stop, reload, should_reload)
         shell_thread = threading.Thread(target=shell.cmdloop)
         shell_thread.daemon = True
         shell_thread.start()
     except KeyboardInterrupt:
         stop()
 
-    main_loop(tasks)
+    main_loop()
 
     logging.debug(f"Exiting main loop.")
     print("Cleaning...")
-    for task in tasks:
+    for task in TASKS:
         task.stop()
     logging.debug(f"Exited main loop.")
 
