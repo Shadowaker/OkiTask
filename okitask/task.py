@@ -168,7 +168,8 @@ class Task:
             proc.process.kill()
             proc.process.wait()
             proc.change_status(KILLED)
-        self.processes.remove(proc)
+        if remove:
+            self.processes.remove(proc)
 
     def run(self, force: bool = False):
         if self.status != "STOPPED" and not force:
