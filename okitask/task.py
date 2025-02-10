@@ -24,6 +24,10 @@ STATUS = {
     4: "EXITED"
 }
 
+ALWAYS = "always"
+NEVER = "never",
+UNEXPECTED = "unexpected"
+
 TASK_DEFINITION_TYPES = {
             "name": str, "cmd": str, "amount": int, "auto_start": bool,
             "auto_restart": str, "expected_output": list, "time_start": int,
@@ -159,12 +163,11 @@ class Task:
 
     def _stop_process(self, proc: Process, remove: bool = False):
         try:
-            proc.process.send_signal(signal.Signals(self.definition.kill_signal))
-            proc.process.wait(timeout=self.definition.time_stop * 1000)
             proc.change_status(STOPPED)
-            logging.debug(f"Stopped {proc}.")
+            proc.process.send_signal(signal.Signals(self.definition.kill_signal))
+            proc.process.wait(timeout=self.definition.time_stop)
+            logging.info(f"Stopped {proc}.")
         except Exception as e:
-            logging.error(f"ERROR: {e}")
             logging.warning(f"Process {proc.id} did not stop in gracefully. Forcing termination...")
             proc.process.kill()
             proc.process.wait()
@@ -221,23 +224,27 @@ class Task:
 
         for proc in self.processes:
             if proc.process.poll() is None:
-                if (time.time() - proc.started_time) >= self.definition.time_start:
+                if (time.time() - proc.started_time) >= self.definition.time_start and proc.status == STARTED:
                     proc.change_status(ACTIVE)
                 continue
-            proc.change_status(EXITED)
+            if proc.status != STOPPED:
+                proc.change_status(EXITED)
         logging.debug(f"[{self.name}] Ended check loop.")
 
     def restart_failed_processes(self):
 
         logging.debug(f"[{self.name}] Starting restart loop...")
         for i, proc in enumerate(self.processes):
-            if proc.status == EXITED:
-                if proc.process.returncode != 0: # TODO and filter by expected outputs and skip if stopped
+            if proc.status == EXITED and self.definition.auto_restart in [ALWAYS, UNEXPECTED]:
+                if proc.process.returncode != 0:
+                    if self.definition.expected_outputs:
+                        if proc.process.returncode not in self.definition.expected_outputs:
+                            continue
                     if self.definition.max_retries > proc.retried:
-                       new_proc = self._start_process(proc.id)
-                       new_proc.set_retried(proc.retried + 1)
-                       self.processes[i] = new_proc
-                       del proc
+                        new_proc = self._start_process(proc.id)
+                        new_proc.set_retried(proc.retried + 1)
+                        self.processes[i] = new_proc
+                        del proc
 
         logging.debug(f"[{self.name}] Ended restart loop.")
 
