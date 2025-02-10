@@ -1,4 +1,5 @@
 import cmd
+from errors import TaskAlreadyRunning
 
 
 class Shell(cmd.Cmd):
@@ -18,7 +19,10 @@ class Shell(cmd.Cmd):
             return
         task = self._get_task(arg)
         if task:
-            task.run()
+            try:
+                task.run()
+            except TaskAlreadyRunning:
+                print(f"{task.name} already running.")
 
     def do_stop(self, arg):
         """Stop a specified task: stop task_name"""

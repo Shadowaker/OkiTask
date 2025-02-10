@@ -159,11 +159,12 @@ class Task:
 
     def _stop_process(self, proc: Process, remove: bool = False):
         try:
-            proc.process.send_signal(IntEnum(self.definition.kill_signal))
-            proc.process.wait(timeout=self.definition.time_stop)
+            proc.process.send_signal(signal.Signals(self.definition.kill_signal))
+            proc.process.wait(timeout=self.definition.time_stop * 1000)
             proc.change_status(STOPPED)
             logging.debug(f"Stopped {proc}.")
         except Exception as e:
+            logging.error(f"ERROR: {e}")
             logging.warning(f"Process {proc.id} did not stop in gracefully. Forcing termination...")
             proc.process.kill()
             proc.process.wait()
