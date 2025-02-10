@@ -135,9 +135,9 @@ class Task:
         self.processes: list[Process] = []
 
     def __str__(self):
-        return f"[TASK]  {cl.CYAN}{self.name}{cl.BLANK}\t|\t{cl.BACKGROUND_GREEN}{self.status}{cl.BLANK}"
+        return f"[TASK]  {cl.CYAN}{self.name}{cl.BLANK}\t\t|\t\t{cl.BACKGROUND_GREEN}{self.status}{cl.BLANK}"
 
-    def _start_process(self, proc_id: int):
+    def _start_process(self, proc_id: int, append: bool = True):
         logging.info(f"Starting a new {self.name} process.")
         if self.definition.stdout != "":
             output_file = open(self.definition.stdout, "a")
@@ -153,7 +153,8 @@ class Task:
         try:
             proc = subprocess.Popen(self.definition.get_command_list(), stdout=output_file, stderr=error_file, cwd=self.definition.dir, umask=int(self.definition.umask), env=self.definition.get_updated_env())
             proc = Process(proc_id, f"{self.name}", proc)
-            self.processes.append(proc)
+            if append:
+                self.processes.append(proc)
             proc.change_status(STARTED)
             logging.debug(f"Started {proc}.")
             return proc
@@ -206,6 +207,7 @@ class Task:
         except TaskStopError:
             pass
 
+        self.processes.clear()
         self.run()
 
     def reconcile(self):
@@ -214,7 +216,7 @@ class Task:
             logging.debug(f"{self.name} has more processes than the amount defined in the config file. Removing extra processes.")
             for proc in self.processes[self.definition.amount:]:
                 self._stop_process(proc, True)
-        elif len(self.processes) < self.definition.amount:
+        elif len(self.processes) < self.definition.amount and self.definition.auto_start:
             logging.debug(f"{self.name} has less processes than the amount defined in the config file. Adding extra processes.")
             self.run(True)
 
@@ -237,11 +239,11 @@ class Task:
         for i, proc in enumerate(self.processes):
             if proc.status == EXITED and self.definition.auto_restart in [ALWAYS, UNEXPECTED]:
                 if proc.process.returncode != 0:
-                    if self.definition.expected_outputs:
-                        if proc.process.returncode not in self.definition.expected_outputs:
+                    if self.definition.expected_output and self.definition.auto_restart == UNEXPECTED:
+                        if abs(proc.process.returncode) in self.definition.expected_output:
                             continue
                     if self.definition.max_retries > proc.retried:
-                        new_proc = self._start_process(proc.id)
+                        new_proc = self._start_process(proc.id, False)
                         new_proc.set_retried(proc.retried + 1)
                         self.processes[i] = new_proc
                         del proc
@@ -253,4 +255,4 @@ class Task:
         print(self)
         for proc in self.processes:
             exit_code = f"exited with code: {proc.process.returncode}" if proc.process.returncode is not None else ""
-            print(f"  > {cl.MAGENTA}{proc.id}{cl.BLANK} {cl.BACKGROUND_GREEN}{STATUS[proc.status]}{cl.BLANK} | {exit_code}")
+            print(f"  > {cl.MAGENTA}{proc.id}{cl.BLANK} ({proc.process.pid}) {cl.BACKGROUND_GREEN}{STATUS[proc.status]}{cl.BLANK}\t| {exit_code}")
