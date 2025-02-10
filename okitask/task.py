@@ -160,7 +160,7 @@ class Task:
     def _stop_process(self, proc: Process, remove: bool = False):
         try:
             proc.process.send_signal(IntEnum(self.definition.kill_signal))
-            proc.process.wait()
+            proc.process.wait(timeout=self.definition.time_stop)
             proc.change_status(STOPPED)
             logging.debug(f"Stopped {proc}.")
         except Exception as e:
