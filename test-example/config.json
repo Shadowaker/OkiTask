@@ -1,6 +1,6 @@
 {
     "tasks": {
-        "pd": {
+        "ts1": {
             "cmd": "curl parrot.live",
             "amount": 5,
             "auto_start": false,
@@ -15,7 +15,7 @@
             "max_retries": 1,
             "kill_signal": "SIGINT",
             "time_stop": 1,
-            "stdout": "",
+            "stdout": "./tst.txt",
             "stderr": "",
             "env": {
             },
@@ -26,6 +26,28 @@
             "cmd": "python3 /nfs/homes/dridolfo/Desktop/OkiTask/Test/test.py",
             "amount": 1,
             "auto_start": false,
+            "auto_restart": "never",
+            "expected_outputs":
+                [
+                    0,
+                    2
+                ],
+            "time_start": 1,
+            "max_retries": 1,
+            "kill_signal": "SIGKILL",
+            "time_stop": 1,
+            "stdout": "./t.txt",
+            "stderr": "",
+            "env": {
+                "x-env": "test"
+            },
+            "dir": "/nfs/homes/dridolfo/Desktop/OkiTask/okitask/utility",
+            "umask": "0666"
+        },
+        "ts3": {
+            "cmd": "ls",
+            "amount": 2,
+            "auto_start": true,
             "auto_restart": "never",
             "expected_outputs":
                 [
