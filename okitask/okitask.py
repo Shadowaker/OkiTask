@@ -105,6 +105,18 @@ def reload():
 
         task.reconcile()
 
+    for name in task_definitions:
+        existing_task = [x for x in TASKS if x.name == name]
+        if len(existing_task) != 0:
+            continue
+        logging.info(f"New task {name} added to the config file. Adding...")
+        definition = task_definitions[name]
+        task = ts.Task(name, definition)
+        TASKS.append(task)
+        if definition.auto_start:
+            task.run()
+
+
     execute_reload(False)
     logging.info("Config file reloaded")
 
@@ -128,8 +140,8 @@ def load_config(config_name: str):
 
     # setting up logging
     logging.basicConfig(
-        #filename="log.logs",
-        #filemode='w',
+        filename="okitask.log",
+        filemode='w',
         format='[%(levelname)s] %(message)s',
         level=log_conf.level,
     )
