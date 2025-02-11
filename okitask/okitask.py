@@ -105,8 +105,8 @@ def reload():
 
         task.reconcile()
 
+    execute_reload(False)
     logging.info("Config file reloaded")
-
 
 
 def load_config(config_name: str):
@@ -134,6 +134,13 @@ def load_config(config_name: str):
         level=log_conf.level,
     )
     return conf
+
+def handle_sighup(signum, frame):
+    if should_reload():
+        return
+
+    logging.info("Reloading config file on SIGHUP")
+    execute_reload(True)
 
 def main(argv: list):
 

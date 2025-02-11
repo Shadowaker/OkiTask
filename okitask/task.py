@@ -3,7 +3,6 @@ import os
 import subprocess
 import logging
 import time
-from enum import IntEnum
 
 from subprocess import Popen
 
@@ -112,6 +111,9 @@ class TaskDefinition:
         if not 0 <= self.umask <= 0o777:
             raise TaskInitError(f"The passed umask ({self.umask}) is not valid")
 
+        for i, code in enumerate(self.expected_output):
+            self.expected_output[i] = int(code)
+
     def get_command_list(self) -> list[str]:
         return self.cmd.split(" ")
 
@@ -123,6 +125,15 @@ class TaskDefinition:
 
     def should_be_restarted(self, other: "TaskDefinition") -> bool:
         return self.cmd != other.cmd or self.stdout != other.stdout or self.stderr != other.stderr or self.env != other.env or self.dir != other.dir != self.umask != other.umask
+
+    def is_expected_exit_code(self, code: int) -> bool:
+        if code == 0:
+            return True
+        if len(self.expected_output) == 0:
+            return True
+        code = abs(code)
+        return code in self.expected_output
+
 
 
 class Task:
@@ -231,28 +242,25 @@ class Task:
                 continue
             if proc.status != STOPPED:
                 proc.change_status(EXITED)
+
         logging.debug(f"[{self.name}] Ended check loop.")
 
     def restart_failed_processes(self):
-
         logging.debug(f"[{self.name}] Starting restart loop...")
         for i, proc in enumerate(self.processes):
             if proc.status == EXITED and self.definition.auto_restart in [ALWAYS, UNEXPECTED]:
-                if proc.process.returncode != 0:
-                    if self.definition.expected_output and self.definition.auto_restart == UNEXPECTED:
-                        if abs(proc.process.returncode) in self.definition.expected_output:
-                            continue
-                    if self.definition.max_retries > proc.retried:
-                        new_proc = self._start_process(proc.id, False)
-                        new_proc.set_retried(proc.retried + 1)
-                        self.processes[i] = new_proc
-                        del proc
-
+                return_code = proc.process.returncode
+                expected = self.definition.is_expected_exit_code(return_code)
+                if (not expected and self.definition.auto_restart == UNEXPECTED) or self.definition.auto_restart == ALWAYS:
+                    new_proc = self._start_process(proc.id, False)
+                    new_proc.set_retried(proc.retried + 1)
+                    self.processes[i] = new_proc
+                    del proc
         logging.debug(f"[{self.name}] Ended restart loop.")
 
     def display_status(self):
 
         print(self)
         for proc in self.processes:
-            exit_code = f"exited with code: {proc.process.returncode}" if proc.process.returncode is not None else ""
+            exit_code = f"exited with code: {abs(proc.process.returncode)}" if proc.process.returncode is not None else ""
             print(f"  > {cl.MAGENTA}{proc.id}{cl.BLANK} ({proc.process.pid}) {cl.BACKGROUND_GREEN}{STATUS[proc.status]}{cl.BLANK}\t| {exit_code}")

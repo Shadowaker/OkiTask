@@ -8,8 +8,7 @@
             "auto_restart": "never",        # OPTIONAL Restart the task on "never", "always", or "unexpected", default "never"
             "expected_outputs":              # OPTIONAL Which return codes represent an "expected" exit status, default []
                 [
-                    "OK",
-                    "example_code"
+                    0, 9
                 ],
             "time_start": 1,                # OPTIONAL How long the program should be running after it’s started for it to be considered "successfully started", default 0
             "max_retries": 1,               # OPTIONAL How many times a restart should be attempted before aborting, default 3
