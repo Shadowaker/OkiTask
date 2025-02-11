@@ -1,0 +1,51 @@
+{
+    "tasks": {
+        "pd": {
+            "cmd": "curl parrot.live",
+            "amount": 5,
+            "auto_start": false,
+            "auto_restart": "unexpected",
+            "expected_outputs":
+                [
+                    0,
+                    127,
+                    2
+                ],
+            "time_start": 10,
+            "max_retries": 1,
+            "kill_signal": "SIGINT",
+            "time_stop": 1,
+            "stdout": "",
+            "stderr": "",
+            "env": {
+            },
+            "dir": ".",
+            "umask": "0666"
+        },
+        "ts2": {
+            "cmd": "python3 /nfs/homes/dridolfo/Desktop/OkiTask/Test/test.py",
+            "amount": 1,
+            "auto_start": false,
+            "auto_restart": "never",
+            "expected_outputs":
+                [
+                    0,
+                    2
+                ],
+            "time_start": 1,
+            "max_retries": 1,
+            "kill_signal": "SIGKILL",
+            "time_stop": 1,
+            "stdout": "./t.txt",
+            "stderr": "",
+            "env": {
+                "x-env": "test"
+            },
+            "dir": "/nfs/homes/dridolfo/Desktop/OkiTask/okitask/utility",
+            "umask": "0666"
+        }
+    },
+    "log": {
+        "level": "INFO"
+    }
+}

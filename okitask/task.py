@@ -100,8 +100,10 @@ class TaskDefinition:
 
         if self.dir == ".":
             self.dir = os.getcwd()
-        elif os.path.isdir(self.dir) and os.access(path=self.dir, mode=os.X_OK):
+        elif not os.path.isdir(self.dir) and not os.access(path=self.dir, mode=os.X_OK):
                 raise TaskInitError(f"The passed dir ({self.dir}) config is not valid")
+        #print(self.dir)
+        #print(os.path.isdir(self.dir), os.access(path=self.dir, mode=os.X_OK))
 
         try:
             self.umask = int(self.umask, 8)
